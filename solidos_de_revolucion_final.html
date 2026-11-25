@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador de Sólidos de Revolución</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#6d8f00;--blue:#2563eb;--navy:#0b1f3a;--warn:#b45309;--err:#b91c1c}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+header{background:linear-gradient(135deg,#0b1f3a,#133a6b);color:#fff;padding:18px 24px}
+header h1{margin:0;font-size:1.3rem}
+header p{margin:4px 0 0;opacity:.8;font-size:.88rem}
+.layout{display:grid;grid-template-columns:370px 1fr;gap:16px;padding:16px;max-width:1600px;margin:0 auto}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card h2{margin:0 0 10px;font-size:.95rem;letter-spacing:.02em}
+aside{display:flex;flex-direction:column;gap:12px}
+@media(min-width:1001px){aside{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;align-self:start;padding-right:2px}}
+label.f{display:block;font-size:.78rem;color:var(--muted);margin:8px 0 3px}
+input[type=text],select{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;font-size:.92rem;background:#fff}
+input[type=text]{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+input[type=text]:focus,select:focus{outline:2px solid #93c5fd;border-color:#60a5fa}
+input[type=text]:disabled{background:#f1f5f9;color:#94a3b8}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid #cbd5e1;border-radius:9px;overflow:hidden}
+.seg input{display:none}
+.seg label{padding:8px 4px;text-align:center;font-size:.82rem;cursor:pointer;background:#fff;border-right:1px solid #cbd5e1;user-select:none}
+.seg label:last-child{border-right:0}
+.seg input:checked+label{background:var(--navy);color:#fff}
+.hint{font-size:.78rem;color:var(--muted);margin-top:6px}
+.chk{display:flex;align-items:center;gap:8px;font-size:.86rem;margin:6px 0}
+input[type=range]{width:100%}
+.sl{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-top:8px}
+.sl b{color:var(--ink)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{border:0;border-radius:9px;padding:9px 12px;font:inherit;font-size:.86rem;cursor:pointer;background:var(--navy);color:#fff}
+button.sec{background:#e2e8f0;color:#0f172a}
+button:hover{filter:brightness(1.1)}
+.msg{font-size:.82rem;margin-top:8px;color:var(--err)}
+.warn{color:var(--warn)}
+main{display:flex;flex-direction:column;gap:16px;min-width:0}
+#view{height:min(62vh,640px);min-height:380px;border-radius:14px;overflow:hidden;background:#0f172a;position:relative}
+#view canvas{display:block}
+.overlay{position:absolute;left:12px;bottom:10px;color:#94a3b8;font-size:.76rem;pointer-events:none}
+.badge{position:absolute;left:12px;top:10px;background:rgba(15,23,42,.75);color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px 10px;font-size:.8rem;max-width:80%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1200px){.two{grid-template-columns:1fr}}
+#c2d{width:100%;height:340px;display:block;border-radius:10px;background:#fbfcfe;border:1px solid var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+td,th{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.78rem}
+td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.ctx{font-size:.88rem;background:#f8fafc;border-left:4px solid var(--accent);padding:8px 12px;border-radius:6px;margin-bottom:10px}
+.steps .katex-display{margin:.6em 0;overflow-x:auto;overflow-y:hidden}
+.note{font-size:.86rem;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-top:8px}
+footer{max-width:1600px;margin:0 auto;padding:4px 16px 24px;color:var(--muted);font-size:.78rem}
+
+/* --- ejemplos guiados --- */
+.exbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.exbtns button{background:#fff;color:var(--ink);border:1.5px solid #cbd5e1;padding:9px 6px;text-align:center;line-height:1.25}
+.exbtns button b{display:block;font-size:.84rem}
+.exbtns button span{font-size:.7rem;color:var(--muted)}
+.exbtns button.on{border-color:var(--navy);background:#eef3fb}
+.exbtns button:hover{filter:none;border-color:#60a5fa}
+button.scratch{width:100%;margin-top:8px;background:var(--accent);color:#fff}
+
+/* --- editor de funciones --- */
+.ins{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 2px}
+.ins button{padding:4px 8px;font-size:.78rem;background:#eef2f7;color:#0f172a;border:1px solid #dbe3ee;font-family:ui-monospace,Menlo,Consolas,monospace}
+.pv{min-height:1.7em;font-size:.95rem;margin-top:4px;overflow-x:auto;overflow-y:hidden;color:#1e3a8a}
+details.syn{margin-top:8px;font-size:.8rem;color:#334155}
+details.syn summary{cursor:pointer;color:var(--blue)}
+details.syn code,.hint code{background:#eef2f7;padding:0 4px;border-radius:4px}
+details.syn ul{margin:6px 0 0;padding-left:18px}
+.roots{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center;font-size:.8rem;color:var(--muted)}
+.chip{padding:3px 9px;font-size:.78rem;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:999px;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* --- pasos --- */
+.gstep{display:grid;grid-template-columns:32px 1fr;gap:12px;margin:12px 0;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fcfdff}
+.gnum{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+.gt{font-weight:650;font-size:.93rem;margin-bottom:2px}
+.gd{font-size:.88rem;color:#334155}
+.gd .katex-display{margin:.5em 0}
+.gstep.fin{border-color:#bbf7d0;background:#f6fffa}
+.gstep.fin .gnum{background:#15803d}
+.spin{color:var(--muted);font-style:italic}
+.empty{font-size:.9rem;color:#334155}
+.empty ol{margin:6px 0 0;padding-left:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Simulador Computacional de Sólidos de Revolución</h1>
+  <p>Cálculo Integral · Ingeniería de Sistemas · Discos, Arandelas y Cascarones Cilíndricos · Funciones 100 % personalizables · Visualización 3D interactiva</p>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="card">
+      <h2>Ejemplos guiados (uno por método)</h2>
+      <div class="exbtns" id="exbtns">
+        <button data-ex="d1"><b>Discos</b><span>y = √x</span></button>
+        <button data-ex="a1"><b>Arandelas</b><span>√x y x²</span></button>
+        <button data-ex="c1"><b>Cascarones</b><span>y = 2x²−x³</span></button>
+      </div>
+      <button class="scratch" id="btnScratch">✎ Crear mi propio sólido desde cero</button>
+      <div class="hint">Cada ejemplo trae región, elemento representativo, integral, resolución y verificación. Todos los campos se pueden editar después.</div>
+    </div>
+
+    <div class="card">
+      <h2>1 · Más ejemplos</h2>
+      <select id="preset"></select>
+      <div class="hint">Elige un ejemplo precargado o “Personalizado” para escribir tus propias funciones.</div>
+    </div>
+
+    <div class="card">
+      <h2>2 · Método y eje de giro</h2>
+      <div class="seg" id="methodSeg">
+        <input type="radio" name="method" id="m_disk" value="disk" checked><label for="m_disk">Discos</label>
+        <input type="radio" name="method" id="m_washer" value="washer"><label for="m_washer">Arandelas</label>
+        <input type="radio" name="method" id="m_shell" value="shell"><label for="m_shell">Cascarones</label>
+      </div>
+      <div class="row">
+        <div>
+          <label class="f" for="orient">Eje de rotación</label>
+          <select id="orient">
+            <option value="H">Horizontal (y = c)</option>
+            <option value="V">Vertical (x = c)</option>
+          </select>
+        </div>
+        <div>
+          <label class="f" for="cval">Valor de c</label>
+          <input type="text" id="cval" value="0">
+        </div>
+      </div>
+      <div class="hint" id="methodHint"></div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Tus funciones y límites</h2>
+      <label class="f" for="F" id="Flabel">f(x)</label>
+      <input type="text" id="F" value="sqrt(x)" spellcheck="false" autocomplete="off" placeholder="ej.: sqrt(x),  2x^2 - x^3,  sin(x^2)">
+      <div class="pv" id="pvF"></div>
+      <label class="f" for="G" id="Glabel">g(x)</label>
+      <input type="text" id="G" value="" spellcheck="false" autocomplete="off" placeholder="ej.: x^2,  1,  exp(-x)">
+      <div class="pv" id="pvG"></div>
+      <div class="row">
+        <div><label class="f" for="a">Límite inferior a</label><input type="text" id="a" value="0" autocomplete="off"></div>
+        <div><label class="f" for="b">Límite superior b</label><input type="text" id="b" value="4" autocomplete="off"></div>
+      </div>
+      <div class="ins" id="ins">
+        <button data-t="^2" title="Potencia">x²</button>
+        <button data-t="sqrt()" data-c="5" title="Raíz cuadrada">√</button>
+        <button data-t="abs()" data-c="4" title="Valor absoluto">|x|</button>
+        <button data-t="sin()" data-c="4">sen</button>
+        <button data-t="cos()" data-c="4">cos</button>
+        <button data-t="tan()" data-c="4">tan</button>
+        <button data-t="exp()" data-c="4" title="e elevado a">eˣ</button>
+        <button data-t="ln()" data-c="3">ln</button>
+        <button data-t="pi">π</button>
+        <button data-t="()" data-c="1">( )</button>
+      </div>
+      <div class="btns" style="margin-top:8px">
+        <button class="sec" id="btnRoots" title="Encuentra dónde se cortan las curvas y propone a y b">⌖ Hallar cortes</button>
+        <button class="sec" id="btnSwap" title="Intercambia f y g">⇄ Intercambiar f ↔ g</button>
+        <button class="sec" id="btnClear" title="Vacía todos los campos">✕ Limpiar</button>
+      </div>
+      <div class="roots" id="roots"></div>
+      <details class="syn">
+        <summary>Ayuda de sintaxis (sin restricciones)</summary>
+        <ul>
+          <li>Operaciones: <code>+ − * / ^</code>; multiplicación implícita: <code>2x</code>, <code>3(x+1)</code>.</li>
+          <li>Funciones: <code>sqrt</code>, <code>cbrt</code>, <code>abs</code>, <code>sin/sen</code>, <code>cos</code>, <code>tan</code>, <code>asin</code>, <code>acos</code>, <code>atan</code>, <code>sinh</code>, <code>cosh</code>, <code>exp</code>, <code>ln</code>, <code>log10</code>.</li>
+          <li>Constantes: <code>pi</code> (o π), <code>e</code>. Los límites y c también admiten expresiones: <code>sqrt(8)</code>, <code>pi/2</code>, <code>-2*sqrt(2)</code>.</li>
+          <li>Funciones por tramos: <code>x &lt; 1 ? x : 2 - x</code>.</li>
+          <li>Escribe las funciones con la variable <code>x</code> o <code>y</code> (da igual); la variable de integración se indica arriba en cada etiqueta.</li>
+        </ul>
+      </details>
+      <div class="msg" id="err"></div>
+      <div class="msg warn" id="warn"></div>
+    </div>
+
+    <div class="card">
+      <h2>4 · Visualización</h2>
+      <div class="sl"><span>Número de secciones n</span><b id="nVal">40</b></div>
+      <input type="range" id="n" min="1" max="200" value="40">
+      <div class="sl"><span>Sección actual k</span><b id="kVal">40</b></div>
+      <input type="range" id="k" min="0" max="40" value="40">
+      <div class="sl"><span>Opacidad de la superficie</span><b id="opVal">0.25</b></div>
+      <input type="range" id="op" min="0" max="1" step="0.05" value="0.25">
+      <div class="chk"><input type="checkbox" id="showSolid" checked><label for="showSolid">Superficie del sólido</label></div>
+      <div class="chk"><input type="checkbox" id="showSlices" checked><label for="showSlices">Secciones (discos / arandelas / cascarones)</label></div>
+      <div class="chk"><input type="checkbox" id="isolate"><label for="isolate">Mostrar solo la sección actual</label></div>
+      <div class="chk"><input type="checkbox" id="cut"><label for="cut">Vista en corte (ver el interior)</label></div>
+      <div class="chk"><input type="checkbox" id="grid" checked><label for="grid">Ejes y malla</label></div>
+      <div class="chk"><input type="checkbox" id="auto"><label for="auto">Rotación automática</label></div>
+      <div class="btns">
+        <button id="btnGraph">Graficar</button>
+        <button id="btnAnim" class="sec">▶ Construir</button>
+        <button id="btnReset" class="sec">Restablecer vista</button>
+        <button id="btnPng" class="sec">Capturar PNG</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="view">
+      <div class="badge" id="badge"></div>
+      <div class="overlay">Arrastra para rotar · rueda para acercar · clic derecho para desplazar</div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h2>Región 2D a rotar</h2>
+        <canvas id="c2d"></canvas>
+        <div class="legend">
+          <span><i style="background:#2563eb"></i>Curva f</span>
+          <span id="lgG"><i style="background:#ea580c"></i>Curva g / frontera</span>
+          <span><i style="background:#dc2626"></i>Eje de rotación</span>
+          <span><i style="background:#f59e0b"></i>Sección k (rectángulo generador)</span>
+          <span><i style="background:#16a34a"></i>Radio (R o ρ)</span>
+          <span><i style="background:#7c3aed"></i>Radio interior r / altura h</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Resultados</h2>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <div class="card steps">
+      <h2>Planteamiento y resolución paso a paso</h2>
+      <div id="steps"></div>
+    </div>
+
+    <div class="card">
+      <h2>Convergencia de la aproximación (suma de Riemann, punto medio)</h2>
+      <div id="conv"></div>
+    </div>
+  </main>
+</div>
+<footer>
+  V<sub>disco</sub> = π∫[R]²dx · V<sub>arandela</sub> = π∫([R]²−[r]²)dx · V<sub>cascarón</sub> = 2π∫ (radio)(altura) dx. Las unidades son arbitrarias (u, u³).
+  La aproximación del software usa exactamente las n secciones que ves dibujadas.
+</footer>
+
+<!-- Motor simbólico (se ejecuta en un Web Worker para no bloquear la página) -->
+<script id="wk" type="text/plain">
+let loaded=false;
+self.onmessage=function(e){
+  const j=e.data;
+  try{
+    if(!loaded){ importScripts('https://cdn.jsdelivr.net/npm/nerdamer@1.1.13/all.min.js'); loaded=true; }
+  }catch(err){ self.postMessage({ok:false,reason:'lib'}); return; }
+  try{
+    const v=j.v;
+    const ex=nerdamer('expand('+j.I+')');
+    const A=nerdamer('integrate('+ex.toString()+','+v+')');
+    const As=A.toString();
+    if(/integrate|defint/.test(As)){ self.postMessage({ok:false,reason:'noanti'}); return; }
+    const sub=function(l){ const o={}; o[v]=l; return nerdamer(As,o); };
+    const Fb=sub(j.b), Fa=sub(j.a);
+    const d=nerdamer('('+Fb.toString()+')-('+Fa.toString()+')');
+    self.postMessage({ok:true,expTex:ex.toTeX(),antiTex:A.toTeX(),FbTex:Fb.toTeX(),FaTex:Fa.toTeX(),dTex:d.toTeX(),num:parseFloat(d.evaluate().text('decimals'))});
+  }catch(err){ self.postMessage({ok:false,reason:'err'}); }
+};
+</script>
+
+<script>
+// ==== MATH CORE START ====
+const PRESETS = [
+ // ---------- DISCOS ----------
+ {id:'d1',group:'Discos · Sistemas',name:'★ Fibra óptica: perfil f(x)=√x',prog:'Ingeniería de Sistemas',method:'disk',orient:'H',c:'0',F:'sqrt(x)',G:'',a:'0',b:'4',
+  ctx:'Modelado de una fibra óptica con estrechamiento parabólico: el radio del núcleo en cada posición x (en u) es √x, para 0 ≤ x ≤ 4. Se rota alrededor del eje X.',
+  exact:{tex:String.raw`8\pi`,val:8*Math.PI},
+  guide:[
+   {t:'Interpreta la región y el eje',d:'La región está limitada por la curva <b>y = √x</b>, el eje X (y = 0) y las rectas x = 0 y x = 4. Gira alrededor del <b>eje X</b>. Observa en la gráfica 2D que la región <b>pega con el eje de giro</b>: no queda ningún hueco.'},
+   {t:'Elige el método: discos',d:'Si cortamos el sólido con planos <b>perpendiculares al eje de giro</b> y la región toca el eje, cada corte es un <b>disco macizo</b>. Por eso usamos el método de discos.'},
+   {t:'Describe el elemento representativo',d:'En cada x, un rectángulo vertical de ancho <i>dx</i> y altura √x gira y forma un disco. Su radio es la distancia al eje (segmento verde <b>R</b> en la gráfica) y su espesor es <i>dx</i>. Volumen de un cilindro delgado: π·R²·espesor.',tex:String.raw`R(x)=\sqrt{x},\qquad dV=\pi\,[R(x)]^2\,dx=\pi\,(\sqrt{x})^2\,dx`},
+   {t:'Plantea la integral',d:'Sumamos (integramos) todos los discos desde x = 0 hasta x = 4.',tex:String.raw`V=\pi\int_{0}^{4}\left(\sqrt{x}\right)^2dx=\pi\int_0^4 x\,dx`},
+   {t:'Resuelve',d:'Antiderivada de x y evaluación de límites.',tex:String.raw`V=\pi\left[\frac{x^2}{2}\right]_0^4=\pi\cdot\frac{16}{2}=8\pi\approx 25.1327\,u^3`,fin:true},
+   {t:'Verifica con el simulador',d:'Mueve el deslizador <b>k</b> o pulsa <b>▶ Construir</b>: el sólido se arma disco a disco. La suma Σ π·R(xᵢ)²·Δx del simulador se acerca a 8π cuando aumentas <b>n</b> (mira la tabla de convergencia).'}
+  ]},
+ {id:'d2',group:'Discos · Sistemas',name:'Cavidad parabólica x=y² (eje Y)',prog:'Ingeniería de Sistemas',method:'disk',orient:'V',c:'0',F:'y^2',G:'',a:'0',b:'2',
+  ctx:'Modelado computacional de un recipiente de simulación en un laboratorio de cómputo, cuyo perfil es x = y² para 0 ≤ y ≤ 2. Se rota alrededor del eje Y, con la función dada en términos de y.',
+  exact:{tex:String.raw`\frac{32}{5}\pi`,val:32*Math.PI/5},
+  steps:[String.raw`V=\pi\int_0^2 (y^2)^2dy=\pi\int_0^2 y^4\,dy`,String.raw`V=\pi\left[\frac{y^5}{5}\right]_0^2=\frac{32\pi}{5}\approx 20.1062\,u^3`]},
+ {id:'d3',group:'Discos · Sistemas',name:'Lente / antena: f(x)=sen x',prog:'Ingeniería de Sistemas',method:'disk',orient:'H',c:'0',F:'sin(x)',G:'',a:'0',b:'pi',
+  ctx:'Perfil de una lente o radomo de antena modelado por y = sen x en [0, π], rotado alrededor del eje X.',
+  exact:{tex:String.raw`\frac{\pi^2}{2}`,val:Math.PI**2/2},
+  steps:[String.raw`V=\pi\int_0^{\pi}\sin^2x\,dx=\pi\int_0^\pi\frac{1-\cos 2x}{2}\,dx`,String.raw`V=\pi\left[\frac{x}{2}-\frac{\sin 2x}{4}\right]_0^\pi=\frac{\pi^2}{2}\approx 4.9348\,u^3`]},
+ {id:'d4',group:'Discos · Sistemas',name:'Cono (verificación): f(x)=x/2',prog:'Ingeniería de Sistemas',method:'disk',orient:'H',c:'0',F:'x/2',G:'',a:'0',b:'4',
+  ctx:'Punta cónica de un conector de fibra óptica (radio 2, altura 4) usada como caso de validación del simulador: su volumen debe coincidir con πr²h/3.',
+  exact:{tex:String.raw`\frac{16}{3}\pi`,val:16*Math.PI/3},
+  steps:[String.raw`V=\pi\int_0^4\left(\frac{x}{2}\right)^2dx=\frac{\pi}{4}\int_0^4 x^2dx`,String.raw`V=\frac{\pi}{4}\cdot\frac{64}{3}=\frac{16\pi}{3}\approx 16.7552\,u^3`]},
+ {id:'d5',group:'Discos · Sistemas',name:'Esfera (verificación): f(x)=√(9−x²)',prog:'Ingeniería de Sistemas',method:'disk',orient:'H',c:'0',F:'sqrt(9-x^2)',G:'',a:'-3',b:'3',
+  ctx:'Cápsula esférica de radio 3 de un sensor de red, usada como caso de validación: su volumen debe coincidir con 4πr³/3 = 36π.',
+  exact:{tex:String.raw`36\pi`,val:36*Math.PI},
+  steps:[String.raw`V=\pi\int_{-3}^{3}(9-x^2)\,dx=\pi\left[9x-\frac{x^3}{3}\right]_{-3}^{3}`,String.raw`V=\pi(18+18)=36\pi\approx 113.0973\,u^3`]},
+ // ---------- ARANDELAS ----------
+ {id:'a1',group:'Arandelas · Sistemas',name:'★ Disipador hueco entre √x y x²',prog:'Ingeniería de Sistemas',method:'washer',orient:'H',c:'0',F:'sqrt(x)',G:'x^2',a:'0',b:'1',
+  ctx:'Disipador térmico de un procesador: la pieza de aluminio es hueca, con pared exterior y = √x y cavidad interior y = x² entre sus puntos de corte x = 0 y x = 1. Se rota alrededor del eje X para hallar el volumen de aluminio.',
+  exact:{tex:String.raw`\frac{3}{10}\pi`,val:3*Math.PI/10},
+  guide:[
+   {t:'Interpreta la región y halla los límites',d:'La región está <b>entre dos curvas</b>: y = x² (abajo) e y = √x (arriba). Los límites de integración son los puntos donde se cortan (botón <b>⌖ Hallar cortes</b> los encuentra solo). Gira alrededor del <b>eje X</b>.',tex:String.raw`\sqrt{x}=x^2\;\Rightarrow\;x=x^4\;\Rightarrow\;x(1-x^3)=0\;\Rightarrow\;x=0,\ x=1`},
+   {t:'Elige el método: arandelas',d:'Ahora la región <b>no toca el eje</b> en todo el intervalo: entre el eje X y la curva inferior x² hay un hueco. Cada corte perpendicular al eje es un <b>disco con agujero</b>: una arandela.'},
+   {t:'Identifica radio exterior R y radio interior r',d:'Ambos se miden <b>desde el eje de giro</b> hasta cada curva (segmentos verde y morado en la gráfica 2D). R es la curva más lejana del eje y r la más cercana. Área de una arandela = π R² − π r².',tex:String.raw`R(x)=\sqrt{x}\ \text{(exterior)},\qquad r(x)=x^2\ \text{(interior)},\qquad dV=\pi\left[R^2-r^2\right]dx`},
+   {t:'Plantea la integral',d:'Primero se <b>elevan al cuadrado</b> los radios y después se restan.',tex:String.raw`V=\pi\int_0^1\left[(\sqrt{x})^2-(x^2)^2\right]dx=\pi\int_0^1(x-x^4)\,dx`},
+   {t:'Resuelve',d:'Integramos término a término y evaluamos en 0 y 1.',tex:String.raw`V=\pi\left[\frac{x^2}{2}-\frac{x^5}{5}\right]_0^1=\pi\left(\frac12-\frac15\right)=\frac{3\pi}{10}\approx 0.9425\,u^3`,fin:true},
+   {t:'Verifica y evita el error típico',d:'Error común: calcular π∫(R−r)² dx. Como (R−r)² ≠ R²−r², eso da un valor distinto y <b>incorrecto</b>. Activa «Vista en corte» para ver el hueco interior y compara la suma de arandelas del simulador con 3π/10.'}
+  ]},
+ {id:'a2',group:'Arandelas · Sistemas',name:'Aspa con eje desplazado y = 2',prog:'Ingeniería de Sistemas',method:'washer',orient:'H',c:'2',F:'x',G:'x^2',a:'0',b:'1',
+  ctx:'Aspa de un ventilador de refrigeración de servidor: la región entre y = x e y = x² (0 ≤ x ≤ 1) se rota alrededor de la recta desplazada y = 2. Los radios se miden desde el eje.',
+  exact:{tex:String.raw`\frac{8}{15}\pi`,val:8*Math.PI/15},
+  steps:[String.raw`R(x)=2-x^2,\qquad r(x)=2-x`,String.raw`V=\pi\int_0^1\left[(2-x^2)^2-(2-x)^2\right]dx=\pi\int_0^1\left(x^4-5x^2+4x\right)dx`,String.raw`V=\pi\left[\frac{x^5}{5}-\frac{5x^3}{3}+2x^2\right]_0^1=\frac{8\pi}{15}\approx 1.6755\,u^3`]},
+ {id:'a3',group:'Arandelas · Sistemas',name:'Carcasa esférica con perforación',prog:'Ingeniería de Sistemas',method:'washer',orient:'H',c:'0',F:'sqrt(9-x^2)',G:'1',a:'-sqrt(8)',b:'sqrt(8)',
+  ctx:'Carcasa esférica de radio 3 de un sensor de red, perforada por un canal axial de cableado de radio 1. El contorno exterior es y = √(9−x²) y el interior y = 1; se cortan en x = ±2√2.',
+  exact:{tex:String.raw`\frac{64\sqrt{2}}{3}\pi`,val:64*Math.SQRT2*Math.PI/3},
+  steps:[String.raw`\sqrt{9-x^2}=1\Rightarrow x=\pm2\sqrt2;\qquad R(x)=\sqrt{9-x^2},\ r(x)=1`,String.raw`V=\pi\int_{-2\sqrt2}^{2\sqrt2}(8-x^2)\,dx=2\pi\left[8x-\frac{x^3}{3}\right]_0^{2\sqrt2}`,String.raw`V=2\pi\left(16\sqrt2-\frac{16\sqrt2}{3}\right)=\frac{64\sqrt2\,\pi}{3}\approx 94.78\,u^3`]},
+ // ---------- CASCARONES ----------
+ {id:'c1',group:'Cascarones · Sistemas',name:'★ Depósito y = 2x² − x³ (eje Y)',prog:'Ingeniería de Sistemas',method:'shell',orient:'V',c:'0',F:'2*x^2-x^3',G:'0',a:'0',b:'2',
+  ctx:'Depósito de refrigerante líquido de un servidor de centro de datos, cuyo perfil es y = 2x² − x³ en [0, 2] (modelado computacional del volumen de fluido). Se rota alrededor del eje Y.',
+  exact:{tex:String.raw`\frac{16}{5}\pi`,val:16*Math.PI/5},
+  guide:[
+   {t:'Interpreta la región y el eje',d:'La región está bajo la curva <b>y = 2x² − x³ = x²(2 − x)</b> (que es ≥ 0 en [0, 2]) y sobre el eje X, entre x = 0 y x = 2. Gira alrededor del <b>eje Y</b>.'},
+   {t:'Elige el método: cascarones',d:'Los rectángulos verticales de ancho <i>dx</i> son <b>paralelos al eje de giro</b>; al girar generan <b>cascarones cilíndricos</b> (tubos). Con arandelas habría que despejar x en función de y a partir de la cúbica 2x² − x³ = y, algo inviable. Con cascarones se integra directamente en x.'},
+   {t:'Identifica radio, altura y espesor',d:'Imagina el cascarón «desenrollado»: un rectángulo de largo 2π·(radio), alto h y grosor <i>dx</i>. El radio es la distancia al eje (segmento verde <b>ρ</b>) y la altura es la del rectángulo (segmento morado <b>h</b>).',tex:String.raw`\rho(x)=x,\qquad h(x)=2x^2-x^3,\qquad dV=2\pi\,\rho\,h\,dx=2\pi\,x\,(2x^2-x^3)\,dx`},
+   {t:'Plantea la integral',d:'Se integra respecto a <b>x</b>, de 0 a 2.',tex:String.raw`V=2\pi\int_0^2 x\,(2x^2-x^3)\,dx=2\pi\int_0^2(2x^3-x^4)\,dx`},
+   {t:'Resuelve',d:'Integramos y evaluamos.',tex:String.raw`V=2\pi\left[\frac{x^4}{2}-\frac{x^5}{5}\right]_0^2=2\pi\left(8-\frac{32}{5}\right)=\frac{16\pi}{5}\approx 10.0531\,u^3`,fin:true},
+   {t:'Verifica con el simulador',d:'En la vista 3D los cascarones se ven como tubos concéntricos que van creciendo desde el eje. Usa «Mostrar solo la sección actual» para ver un único tubo y comprueba que la suma Σ 2π·ρᵢ·hᵢ·Δx converge a 16π/5.'}
+  ]},
+ {id:'c2',group:'Cascarones · Sistemas',name:'Carcasa y = sen(x²) (eje Y)',prog:'Ingeniería de Sistemas',method:'shell',orient:'V',c:'0',F:'sin(x^2)',G:'0',a:'0',b:'sqrt(pi)',
+  ctx:'Carcasa protectora de un módulo de memoria con perfil y = sen(x²) para 0 ≤ x ≤ √π, rotado alrededor del eje Y.',
+  note:'Ventaja sobre arandelas: habría que despejar x = √(arcsen y), con ramas distintas para la parte creciente y decreciente del perfil. Con cascarones, la sustitución u = x² resuelve la integral de inmediato.',
+  exact:{tex:String.raw`2\pi`,val:2*Math.PI},
+  steps:[String.raw`V=2\pi\int_0^{\sqrt\pi}x\,\sin(x^2)\,dx,\qquad u=x^2,\ du=2x\,dx`,String.raw`V=\pi\int_0^{\pi}\sin u\,du=\pi\left[-\cos u\right]_0^{\pi}=2\pi\approx 6.2832\,u^3`]},
+ {id:'c3',group:'Cascarones · Sistemas',name:'Cápsula y = −x² + 4x − 3 (eje Y)',prog:'Ingeniería de Sistemas',method:'shell',orient:'V',c:'0',F:'-x^2+4*x-3',G:'0',a:'1',b:'3',
+  ctx:'Cápsula de un sensor IoT generada por la región bajo la parábola y = −x² + 4x − 3 entre sus raíces x = 1 y x = 3, rotada alrededor del eje Y.',
+  note:'Ventaja sobre arandelas: la parábola alrededor del eje Y obliga a resolver la cuadrática en x (dos ramas) y a separar la región en dos tramos de arandelas. Con cascarones basta una sola integral.',
+  exact:{tex:String.raw`\frac{16}{3}\pi`,val:16*Math.PI/3},
+  steps:[String.raw`V=2\pi\int_1^3 x\,(-x^2+4x-3)\,dx=2\pi\int_1^3(-x^3+4x^2-3x)\,dx`,String.raw`V=2\pi\left[-\frac{x^4}{4}+\frac{4x^3}{3}-\frac{3x^2}{2}\right]_1^3=2\pi\cdot\frac{8}{3}=\frac{16\pi}{3}\approx 16.7552\,u^3`]},
+ {id:'c4',group:'Cascarones · Sistemas',name:'Soporte y = x² con eje desplazado x = 3',prog:'Ingeniería de Sistemas',method:'shell',orient:'V',c:'3',F:'x^2',G:'0',a:'0',b:'2',
+  ctx:'Soporte de un ventilador de rack formado por la región bajo y = x² (0 ≤ x ≤ 2) rotada alrededor de la recta x = 3. El radio de cada cascarón es 3 − x.',
+  exact:{tex:String.raw`8\pi`,val:8*Math.PI},
+  steps:[String.raw`r(x)=3-x,\qquad h(x)=x^2`,String.raw`V=2\pi\int_0^2(3-x)\,x^2\,dx=2\pi\int_0^2(3x^2-x^3)\,dx`,String.raw`V=2\pi\left[x^3-\frac{x^4}{4}\right]_0^2=2\pi(8-4)=8\pi\approx 25.1327\,u^3`]}
+];
+
+function preprocess(s){
+  let t=String(s).trim()
+    .replace(/π/g,'pi').replace(/√/g,'sqrt').replace(/²/g,'^2').replace(/³/g,'^3')
+    .replace(/\bln\(/g,'log(').replace(/\bsen\(/g,'sin(').replace(/\barcsen\(/g,'asin(')
+    .replace(/\barccos\(/g,'acos(').replace(/\barctan\(/g,'atan(').replace(/\btg\(/g,'tan(')
+    .replace(/[−–]/g,'-').replace(/×/g,'*').replace(/÷/g,'/');
+  if(!/[a-z]\s*\(/i.test(t)) t=t.replace(/(\d),(\d)/g,'$1.$2');
+  return t;
+}
+function evalConst(str){
+  const v=math.evaluate(preprocess(str));
+  if(typeof v!=='number'||!isFinite(v)) throw new Error('“'+str+'” no es un número válido.');
+  return v;
+}
+function compileFn(str,name){
+  const s=preprocess(str);
+  if(!s) throw new Error('La función '+name+' está vacía.');
+  let code;
+  try{ code=math.compile(s); }catch(e){ throw new Error('No se pudo interpretar '+name+'(·) = '+str+' ('+e.message+')'); }
+  return t=>{
+    let v; try{ v=code.evaluate({x:t,y:t,t:t}); }catch(e){ return NaN; }
+    return typeof v==='number'?v:NaN;
+  };
+}
+function adaptiveSimpson(f,a,b,eps=1e-12,maxDepth=26){
+  const parts=16, h=(b-a)/parts; let total=0;
+  for(let i=0;i<parts;i++){
+    const x0=a+i*h, x1=x0+h, xm=(x0+x1)/2;
+    const f0=f(x0), f1=f(x1), fm=f(xm);
+    const S=(x1-x0)/6*(f0+4*fm+f1);
+    total+=simpRec(f,x0,x1,eps/parts,S,f0,f1,fm,maxDepth);
+  }
+  return total;
+}
+function simpRec(f,a,b,eps,S,fa,fb,fc,d){
+  const c=(a+b)/2,h=b-a,d1=(a+c)/2,e1=(c+b)/2,fd=f(d1),fe=f(e1);
+  const Sl=h/12*(fa+4*fd+fc),Sr=h/12*(fc+4*fe+fb),S2=Sl+Sr;
+  if(d<=0||Math.abs(S2-S)<=15*eps) return S2+(S2-S)/15;
+  return simpRec(f,a,c,eps/2,Sl,fa,fc,fd,d-1)+simpRec(f,c,b,eps/2,Sr,fc,fb,fe,d-1);
+}
+function recognize(v){
+  if(!isFinite(v)||v<=0) return null;
+  const sets=[[String.raw`\pi`,'π',Math.PI],[String.raw`\pi^2`,'π²',Math.PI**2],[String.raw`\sqrt{2}\,\pi`,'√2·π',Math.SQRT2*Math.PI],[String.raw`\sqrt{3}\,\pi`,'√3·π',Math.sqrt(3)*Math.PI]];
+  for(const [t,s,m] of sets){
+    const x=v/m, tol=5e-10*Math.max(1,Math.abs(x));
+    for(let q=1;q<=600;q++){
+      const p=Math.round(x*q);
+      if(p>0&&Math.abs(x-p/q)<tol){
+        const tex=q===1?(p===1?t:p+t):(p===1?String.raw`\frac{${t}}{${q}}`:String.raw`\frac{${p}}{${q}}`+t);
+        const text=q===1?(p===1?s:p+s):(p===1?s:p+s)+'/'+q;
+        return {tex,text};
+      }
+    }
+  }
+  return null;
+}
+// Representa un número como cadena "bonita" (entero, fracción, √n, múltiplo de π) para usarlo como límite
+function niceStr(r){
+  if(Math.abs(r)<1e-9) return '0';
+  const ri=Math.round(r); if(Math.abs(r-ri)<1e-8) return String(ri);
+  for(let d=2;d<=12;d++){const p=Math.round(r*d); if(Math.abs(r*d-p)<1e-8) return p+'/'+d;}
+  const sq=r*r,sqi=Math.round(sq); if(sqi<=200&&Math.abs(sq-sqi)<1e-7) return (r<0?'-':'')+'sqrt('+sqi+')';
+  const q=r/Math.PI; for(let d=1;d<=6;d++){const p=Math.round(q*d); if(p!==0&&Math.abs(q*d-p)<1e-8) return (p===1?'':p===-1?'-':p+'*')+'pi'+(d>1?'/'+d:'');}
+  return String(+r.toPrecision(10));
+}
+// Raíces de h(t)=0 por barrido + bisección
+function scanRoots(h,lo=-30,hi=30,N=24000){
+  const out=[],step=(hi-lo)/N;
+  let t0=lo,h0=h(t0);
+  const push=r=>{if(!out.length||Math.abs(out[out.length-1]-r)>1e-6) out.push(r);};
+  if(isFinite(h0)&&Math.abs(h0)<1e-12) push(t0);
+  for(let i=1;i<=N;i++){
+    const t1=lo+i*step,h1=h(t1);
+    if(isFinite(h0)&&isFinite(h1)){
+      if(Math.abs(h1)<1e-12) push(t1);
+      else if(h0*h1<0){
+        let l=t0,r=t1,hl=h0;
+        for(let k=0;k<70;k++){const m=(l+r)/2,hm=h(m); if(hl*hm<=0) r=m; else {l=m;hl=hm;}}
+        push((l+r)/2);
+      }
+    }
+    t0=t1;h0=h1;
+  }
+  return out;
+}
+// Construye el modelo matemático (sin gráficos) a partir de la configuración
+function buildModel(cfg){
+  const {method,orient,c,a,b}=cfg;
+  if(!(isFinite(a)&&isFinite(b))) throw new Error('Los límites a y b deben ser números válidos.');
+  if(!(a<b)) throw new Error('Se requiere a < b.');
+  if(!isFinite(c)) throw new Error('El valor de c debe ser un número válido.');
+  const fF=compileFn(cfg.F,'f');
+  const fG=method==='disk'?null:compileFn(cfg.G&&cfg.G.trim()?cfg.G:'0','g');
+  const indepIsX=method==='shell'?orient==='V':orient==='H';
+  const vname=indepIsX?'x':'y';
+  const v1=t=>fF(t), v2=t=>fG?fG(t):c;
+  let radial,axial,integrand;
+  if(method==='shell'){
+    radial=t=>Math.abs(t-c);
+    axial=t=>{const p=v1(t),q=v2(t);return [Math.min(p,q),Math.max(p,q)];};
+    integrand=t=>2*Math.PI*Math.abs(t-c)*Math.abs(v1(t)-v2(t));
+  }else{
+    // Si la región cruza el eje en ese punto, el barrido es un disco macizo: r=0 y R=máx distancia.
+    radial=t=>{const p=v1(t)-c,q=v2(t)-c;return [p*q<0?0:Math.min(Math.abs(p),Math.abs(q)),Math.max(Math.abs(p),Math.abs(q))];};
+    axial=t=>[t,t];
+    integrand=t=>{const [r,R]=radial(t);return Math.PI*(R*R-r*r);};
+  }
+  const N=240, T=[], C1=[], C2=[];
+  let lo=Infinity,hi=-Infinity,rmax=0,amin=Infinity,amax=-Infinity,straddle=false;
+  for(let i=0;i<=N;i++){
+    const t=a+(b-a)*i/N, p=v1(t), q=v2(t);
+    if(!isFinite(p)||!isFinite(q)) throw new Error('La función no está definida (o no es real) en '+vname+' = '+t.toFixed(4)+'. Revisa el dominio y los límites.');
+    T.push(t);C1.push(p);C2.push(q);
+    lo=Math.min(lo,p-c,q-c);hi=Math.max(hi,p-c,q-c);
+    if((p-c)*(q-c)<-1e-12) straddle=true;
+    if(method==='shell'){rmax=Math.max(rmax,Math.abs(t-c));amin=Math.min(amin,p,q);amax=Math.max(amax,p,q);}
+    else{rmax=Math.max(rmax,radial(t)[1]);amin=a;amax=b;}
+  }
+  const warnings=[];
+  if(method==='shell'){ if(a<c&&c<b) warnings.push('El eje '+(orient==='V'?'x':'y')+' = c cruza el intervalo [a, b]: los cascarones de ambos lados se superponen y el volumen podría contarse doble.'); }
+  else if(method==='washer'&&straddle) warnings.push('La región cruza el eje de rotación: en esos tramos el simulador toma r = 0 y R = la mayor distancia (el sólido es lo que barre la región completa).');
+  const ref=adaptiveSimpson(integrand,a,b);
+  const midpoint=n=>{let s=0;const h=(b-a)/n;for(let i=0;i<n;i++)s+=integrand(a+(i+0.5)*h)*h;return s;};
+  return {cfg,indepIsX,vname,v1,v2,radial,axial,integrand,ref,midpoint,warnings,T,C1,C2,ext:{amin,amax,rmax}};
+}
+// ---- Plan simbólico: convierte el problema en un integrando en una sola variable ----
+function toSym(expr,v){
+  const node=math.parse(preprocess(expr));
+  const tr=node.transform(n=>(n.isSymbolNode&&(n.name==='x'||n.name==='y'||n.name==='t'))?new math.SymbolNode(v):n);
+  return tr.toString({implicit:'show',parenthesis:'all'});
+}
+function symbolicPlan(M){
+  const {cfg,T,C1,C2,vname:v}=M,{method,c,a,b}=cfg;
+  const cs='('+(+c.toPrecision(15))+')';
+  const base={v,a:preprocess(cfg.aStr),b:preprocess(cfg.bStr)};
+  try{
+    const f=toSym(cfg.F,v), g=method==='disk'?null:toSym(cfg.G&&cfg.G.trim()?cfg.G:'0',v);
+    if(method==='disk') return {...base,ok:true,K:1,I:`(${f}-${cs})^2`};
+    if(method==='washer'){
+      let outerF=null;
+      for(let i=0;i<T.length;i++){
+        const p=C1[i]-c,q=C2[i]-c;
+        if(p*q<-1e-12) return {ok:false,reason:'La región cruza el eje de rotación: en esos tramos r = 0 y el integrando cambia de forma, así que el valor se obtiene por integración numérica.'};
+        const dp=Math.abs(p),dq=Math.abs(q);
+        if(Math.abs(dp-dq)<1e-9) continue;
+        const o=dp>dq;
+        if(outerF===null) outerF=o; else if(outerF!==o) return {ok:false,reason:'Las curvas se cruzan dentro del intervalo (la curva exterior cambia): habría que dividir la integral en tramos; el valor se obtiene por integración numérica.'};
+      }
+      if(outerF===null) outerF=true;
+      const O=outerF?f:g,In=outerF?g:f;
+      return {...base,ok:true,K:1,I:`(${O}-${cs})^2-(${In}-${cs})^2`};
+    }
+    // cascarones
+    if(a<c&&c<b) return {ok:false,reason:'El eje de giro cruza el intervalo de integración; el valor se obtiene por integración numérica.'};
+    const s=(a>=c);
+    let topF=null;
+    for(let i=0;i<T.length;i++){
+      const p=C1[i],q=C2[i];
+      if(Math.abs(p-q)<1e-9) continue;
+      const o=p>q;
+      if(topF===null) topF=o; else if(topF!==o) return {ok:false,reason:'Las curvas se cruzan dentro del intervalo (la curva superior cambia): habría que dividir la integral en tramos; el valor se obtiene por integración numérica.'};
+    }
+    if(topF===null) topF=true;
+    const Top=topF?f:g,Bot=topF?g:f;
+    return {...base,ok:true,K:2,I:`(${s?`${v}-${cs}`:`${cs}-${v}`})*((${Top})-(${Bot}))`};
+  }catch(e){
+    return {ok:false,reason:'No se pudo convertir la expresión al formato simbólico; el valor se obtiene por integración numérica.'};
+  }
+}
+// ==== MATH CORE END ====
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+const $=id=>document.getElementById(id);
+const fmt=x=>Number.isFinite(x)?x.toFixed(6):'—';
+function renderTex(el,tex,display=false){
+  try{ if(window.katex) katex.render(tex,el,{displayMode:display,throwOnError:false}); else el.textContent=tex; }
+  catch(e){ el.textContent=tex; }
+}
+function texOf(expr){
+  try{ return math.parse(preprocess(expr)).toTex({parenthesis:'auto'}); }catch(e){ return String(expr); }
+}
+const methodName=m=>({disk:'Discos',washer:'Arandelas',shell:'Cascarones cilíndricos'}[m]);
+
+// ---------------- Escena Three.js ----------------
+const view=$('view');
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+view.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0f172a);
+const camera=new THREE.PerspectiveCamera(45,1,0.01,1000);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+scene.add(new THREE.AmbientLight(0xffffff,0.75));
+const d1=new THREE.DirectionalLight(0xffffff,1.1);d1.position.set(5,8,6);scene.add(d1);
+const d2=new THREE.DirectionalLight(0x8ab4ff,0.6);d2.position.set(-6,-3,-5);scene.add(d2);
+const decor=new THREE.Group(), regionG=new THREE.Group(), frame=new THREE.Group();
+scene.add(decor,regionG,frame);
+const solidGroup=new THREE.Group(), sliceGroup=new THREE.Group();
+frame.add(solidGroup,sliceGroup);
+
+function disposeObj(o){
+  if(o.geometry) o.geometry.dispose();
+  if(o.material){const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>{if(m.map)m.map.dispose();m.dispose();});}
+}
+function clearGroup(g){
+  while(g.children.length){const o=g.children[0];g.remove(o);o.traverse(disposeObj);}
+}
+function resize(){
+  const w=view.clientWidth,h=view.clientHeight;
+  renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+new ResizeObserver(()=>{resize();draw2D();}).observe(view);
+
+function niceStep(r){
+  if(!(r>0)) return 1;
+  const p=10**Math.floor(Math.log10(r)),f=r/p;
+  return (f<1.5?1:f<3.5?2:f<7.5?5:10)*p;
+}
+function makeLabel(text,color){
+  const cv=document.createElement('canvas');cv.width=cv.height=128;
+  const g=cv.getContext('2d');g.font='bold 84px sans-serif';g.fillStyle=color;g.textAlign='center';g.textBaseline='middle';g.fillText(text,64,64);
+  const mat=new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true});
+  return new THREE.Sprite(mat);
+}
+function lathe(points,segs,phiStart,phiLen){
+  return new THREE.LatheGeometry(points.map(p=>new THREE.Vector2(Math.max(p[0],0),p[1])),segs,phiStart,phiLen);
+}
+
+// ---------------- Estado ----------------
+let current=null, slices=[], baseMats=[], solidMat=null;
+const hiMat=new THREE.MeshStandardMaterial({color:0xf59e0b,side:THREE.DoubleSide,roughness:.4,emissive:0x5a3500});
+const anim={on:false,kf:0};
+
+function readCfg(){
+  return {
+    method:document.querySelector('input[name=method]:checked').value,
+    orient:$('orient').value,
+    c:evalConst($('cval').value),
+    F:$('F').value, G:$('G').value,
+    aStr:$('a').value, bStr:$('b').value,
+    a:evalConst($('a').value), b:evalConst($('b').value),
+    n:parseInt($('n').value,10)
+  };
+}
+function curVar(){
+  const method=document.querySelector('input[name=method]:checked').value,orient=$('orient').value;
+  return (method==='shell'?orient==='V':orient==='H')?'x':'y';
+}
+
+function build3D(M,fit){
+  const {cfg,indepIsX}=M, {method,orient,c,a,b,n}=cfg, {amin,amax,rmax}=M.ext;
+  clearGroup(decor);clearGroup(regionG);clearGroup(solidGroup);clearGroup(sliceGroup);
+  frame.rotation.set(0,0,0);frame.position.set(0,0,0);
+  if(orient==='V') frame.position.x=c; else {frame.rotation.z=-Math.PI/2;frame.position.y=c;}
+  const cut=$('cut').checked;
+  const phiLen=cut?1.5*Math.PI:2*Math.PI, phiStart=(cut&&orient==='V')?Math.PI/2:0;
+  const segsS=80, segsL=48;
+
+  // superficie del sólido
+  const N=240, pieces=[];
+  if(method==='shell'){
+    const top=[],bot=[];
+    for(let i=0;i<=N;i++){const t=M.T[i],[l,h]=M.axial(t),rho=Math.abs(t-c);top.push([rho,h]);bot.push([rho,l]);}
+    pieces.push(top,bot,[bot[0],top[0]],[bot[N],top[N]]);
+  }else{
+    const outer=[],inner=[];let anyInner=false;
+    for(let i=0;i<=N;i++){const t=M.T[i],[r,R]=M.radial(t);outer.push([R,t]);inner.push([r,t]);if(r>1e-9)anyInner=true;}
+    pieces.push(outer);if(anyInner)pieces.push(inner);
+    pieces.push([inner[0],outer[0]],[inner[N],outer[N]]);
+  }
+  solidMat=new THREE.MeshStandardMaterial({color:0x4f8cff,transparent:true,opacity:parseFloat($('op').value),side:THREE.DoubleSide,depthWrite:false,roughness:.4,metalness:.1});
+  pieces.forEach(p=>solidGroup.add(new THREE.Mesh(lathe(p,segsS,phiStart,phiLen),solidMat)));
+
+  // secciones
+  slices=[];baseMats=[];
+  const h=(b-a)/n;
+  for(let i=0;i<n;i++){
+    const t0=a+i*h,t1=t0+h,tm=t0+h/2;let poly;
+    if(method==='shell'){
+      const r0=Math.abs(t0-c),r1=Math.abs(t1-c),lo=Math.min(r0,r1),hi=Math.max(r0,r1),[g0,g1]=M.axial(tm);
+      poly=[[lo,g0],[hi,g0],[hi,g1],[lo,g1],[lo,g0]];
+    }else{
+      const [r,R]=M.radial(tm);
+      poly=[[r,t0],[R,t0],[R,t1],[r,t1],[r,t0]];
+    }
+    const mat=new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(0.6-0.17*(n>1?i/(n-1):0),0.7,0.55),side:THREE.DoubleSide,roughness:.5,metalness:.05});
+    const mesh=new THREE.Mesh(lathe(poly,segsL,phiStart,phiLen),mat);
+    sliceGroup.add(mesh);slices.push(mesh);baseMats.push(mat);
+  }
+
+  // región 2D en el plano z=0
+  const w2=(t,v)=>indepIsX?new THREE.Vector2(t,v):new THREE.Vector2(v,t);
+  const shape=new THREE.Shape();
+  M.T.forEach((t,i)=>{const p=w2(t,M.C1[i]);i?shape.lineTo(p.x,p.y):shape.moveTo(p.x,p.y);});
+  for(let i=N;i>=0;i--){const p=w2(M.T[i],M.C2[i]);shape.lineTo(p.x,p.y);}
+  try{
+    regionG.add(new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshBasicMaterial({color:0xf59e0b,transparent:true,opacity:0.4,side:THREE.DoubleSide,depthWrite:false})));
+  }catch(e){}
+  const line=(arr,color)=>new THREE.Line(new THREE.BufferGeometry().setFromPoints(arr),new THREE.LineBasicMaterial({color}));
+  regionG.add(line(M.T.map((t,i)=>{const p=w2(t,M.C1[i]);return new THREE.Vector3(p.x,p.y,0);}),0x60a5fa));
+  if(method!=='disk') regionG.add(line(M.T.map((t,i)=>{const p=w2(t,M.C2[i]);return new THREE.Vector3(p.x,p.y,0);}),0xfb923c));
+
+  // extensión y cámara
+  let x0,x1,y0,y1;
+  if(orient==='V'){x0=c-rmax;x1=c+rmax;y0=amin;y1=amax;}else{x0=amin;x1=amax;y0=c-rmax;y1=c+rmax;}
+  M.T.forEach((t,i)=>{[M.C1[i],M.C2[i]].forEach(v=>{const p=w2(t,v);x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);});});
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,size=Math.max(x1-x0,y1-y0,2*rmax,1e-6);
+
+  // eje de rotación (discontinuo rojo)
+  const pad=size*0.12;
+  const A=orient==='V'?[new THREE.Vector3(c,y0-pad,0),new THREE.Vector3(c,y1+pad,0)]:[new THREE.Vector3(x0-pad,c,0),new THREE.Vector3(x1+pad,c,0)];
+  const axisLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(A),new THREE.LineDashedMaterial({color:0xff5d5d,dashSize:size/40,gapSize:size/80}));
+  axisLine.computeLineDistances();decor.add(axisLine);
+
+  // malla y ejes coordenados
+  if($('grid').checked){
+    const step=niceStep(size/8);
+    const far=Math.max(Math.abs(x0),Math.abs(x1),Math.abs(y0),Math.abs(y1))*1.3+step;
+    const half=Math.ceil(far/step)*step, div=Math.round(2*half/step);
+    if(div<=200){
+      const gr=new THREE.GridHelper(2*half,div,0x475569,0x1e293b);gr.rotation.x=Math.PI/2;
+      gr.material.transparent=true;gr.material.opacity=0.55;decor.add(gr);
+    }
+    decor.add(line([new THREE.Vector3(-half,0,0),new THREE.Vector3(half,0,0)],0x94a3b8));
+    decor.add(line([new THREE.Vector3(0,-half,0),new THREE.Vector3(0,half,0)],0x94a3b8));
+    const lx=makeLabel('x','#cbd5e1'),ly=makeLabel('y','#cbd5e1');
+    const ls=size*0.09;lx.scale.set(ls,ls,1);ly.scale.set(ls,ls,1);
+    lx.position.set(Math.min(half,x1+size*0.35),-ls*0.6,0);ly.position.set(-ls*0.6,Math.min(half,y1+size*0.35),0);
+    decor.add(lx,ly);
+  }
+  current=M;
+  if(fit){
+    const d=size*1.7;
+    controls.target.set(cx,cy,0);
+    camera.position.set(cx+d*0.75,cy+d*0.55,d*1.05);
+    camera.near=d/200;camera.far=d*200;camera.updateProjectionMatrix();controls.update();
+  }
+  applyReveal();
+}
+
+function applyReveal(){
+  if(!current) return;
+  const n=slices.length,k=parseInt($('k').value,10),iso=$('isolate').checked,showS=$('showSlices').checked;
+  solidGroup.visible=$('showSolid').checked;
+  sliceGroup.visible=showS;
+  slices.forEach((m,i)=>{
+    if(iso){m.visible=(i===k-1);m.material=hiMat;}
+    else{m.visible=i<k;m.material=(i===k-1&&k<n)?hiMat:baseMats[i];}
+  });
+  $('kVal').textContent=k;
+  draw2D();
+}
+
+// ---------------- Región 2D ----------------
+function draw2D(){
+  const cv=$('c2d');if(!cv) return;
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  if(!w||!h) return;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  const M=current;if(!M) return;
+  const {cfg,indepIsX}=M,{method,orient,c,a,b,n}=cfg;
+  const W=(t,v)=>indepIsX?[t,v]:[v,t];
+  const P1=M.T.map((t,i)=>W(t,M.C1[i])),P2=M.T.map((t,i)=>W(t,M.C2[i]));
+  const xs=[0],ys=[0];
+  [...P1,...P2].forEach(p=>{xs.push(p[0]);ys.push(p[1]);});
+  if(orient==='H') ys.push(c); else xs.push(c);
+  let xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
+  if(xmax-xmin<1e-9){xmin-=1;xmax+=1;} if(ymax-ymin<1e-9){ymin-=1;ymax+=1;}
+  const px0=(xmax-xmin)*0.08,py0=(ymax-ymin)*0.08;
+  xmin-=px0;xmax+=px0;ymin-=py0;ymax+=py0;
+  const m=30,s=Math.min((w-2*m)/(xmax-xmin),(h-2*m)/(ymax-ymin));
+  const ox=m+((w-2*m)-s*(xmax-xmin))/2,oy=m+((h-2*m)-s*(ymax-ymin))/2;
+  const X=x=>ox+(x-xmin)*s,Y=y=>h-(oy+(y-ymin)*s);
+  // malla
+  g.font='11px system-ui';g.lineWidth=1;
+  const sx=niceStep((xmax-xmin)/6),sy=niceStep((ymax-ymin)/6);
+  g.strokeStyle='#e5e9f0';g.fillStyle='#94a3b8';
+  for(let x=Math.ceil(xmin/sx)*sx;x<=xmax;x+=sx){g.beginPath();g.moveTo(X(x),Y(ymin));g.lineTo(X(x),Y(ymax));g.stroke();g.textAlign='center';g.fillText(+x.toFixed(6),X(x),h-6);}
+  for(let y=Math.ceil(ymin/sy)*sy;y<=ymax;y+=sy){g.beginPath();g.moveTo(X(xmin),Y(y));g.lineTo(X(xmax),Y(y));g.stroke();g.textAlign='left';g.fillText(+y.toFixed(6),3,Y(y)-3);}
+  g.strokeStyle='#64748b';g.lineWidth=1.3;
+  if(xmin<0&&xmax>0){g.beginPath();g.moveTo(X(0),Y(ymin));g.lineTo(X(0),Y(ymax));g.stroke();}
+  if(ymin<0&&ymax>0){g.beginPath();g.moveTo(X(xmin),Y(0));g.lineTo(X(xmax),Y(0));g.stroke();}
+  // región
+  g.beginPath();P1.forEach((p,i)=>i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));
+  for(let i=P2.length-1;i>=0;i--)g.lineTo(X(P2[i][0]),Y(P2[i][1]));
+  g.closePath();g.fillStyle='rgba(245,158,11,.28)';g.fill();
+  const stroke=(P,col)=>{g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));g.strokeStyle=col;g.lineWidth=2.2;g.stroke();};
+  stroke(P1,'#2563eb');if(method!=='disk')stroke(P2,'#ea580c');
+  // eje de rotación
+  g.setLineDash([7,5]);g.strokeStyle='#dc2626';g.lineWidth=2;g.beginPath();
+  if(orient==='H'){g.moveTo(X(xmin),Y(c));g.lineTo(X(xmax),Y(c));}else{g.moveTo(X(c),Y(ymin));g.lineTo(X(c),Y(ymax));}
+  g.stroke();g.setLineDash([]);
+  g.fillStyle='#dc2626';g.font='bold 12px system-ui';g.textAlign='left';
+  g.fillText(orient==='H'?'eje y = '+(+c.toFixed(4)):'eje x = '+(+c.toFixed(4)),orient==='H'?X(xmin)+6:X(c)+6,orient==='H'?Y(c)-6:Y(ymax)+14);
+  // rectángulo generador de la sección k
+  const k=Math.max(1,parseInt($('k').value,10)||1),hh=(b-a)/n,t0=a+(k-1)*hh,t1=t0+hh,tm=t0+hh/2;
+  const va=M.v1(tm),vb=M.v2(tm);
+  let rx0,rx1,ry0,ry1;
+  if(indepIsX){rx0=t0;rx1=t1;ry0=Math.min(va,vb);ry1=Math.max(va,vb);}
+  else{ry0=t0;ry1=t1;rx0=Math.min(va,vb);rx1=Math.max(va,vb);}
+  const rw=Math.max(X(rx1)-X(rx0),2),rh=Math.max(Y(ry0)-Y(ry1),2);
+  g.fillStyle='rgba(245,158,11,.85)';g.strokeStyle='#b45309';g.lineWidth=1;
+  g.fillRect(X(rx0),Y(ry1),rw,rh);g.strokeRect(X(rx0),Y(ry1),rw,rh);
+  // anotaciones del elemento representativo (radios / altura)
+  const seg=(p,q,col)=>{g.beginPath();g.moveTo(X(p[0]),Y(p[1]));g.lineTo(X(q[0]),Y(q[1]));g.strokeStyle=col;g.lineWidth=2.2;g.stroke();};
+  const tag=(txt,p,q,col)=>{g.fillStyle=col;g.font='bold 13px system-ui';g.textAlign='left';g.fillText(txt,(X(p[0])+X(q[0]))/2+6,(Y(p[1])+Y(q[1]))/2-5);};
+  if(method==='shell'){
+    const hm=(va+vb)/2,p=W(c,hm),q=W(tm,hm);seg(p,q,'#16a34a');tag('ρ',p,q,'#16a34a');
+    const lo=Math.min(va,vb),hi=Math.max(va,vb);
+    if(hi-lo>1e-9){const p2=W(tm,lo),q2=W(tm,hi);seg(p2,q2,'#7c3aed');tag('h',p2,q2,'#7c3aed');}
+  }else{
+    const [rr]=M.radial(tm),pv=va-c,qv=vb-c,farIsA=Math.abs(pv)>=Math.abs(qv);
+    const outerV=farIsA?va:vb,innerV=farIsA?vb:va,p0=W(tm,c);
+    const pR=W(tm,outerV);seg(p0,pR,'#16a34a');tag('R',p0,pR,'#16a34a');
+    if(rr>1e-9){const pr=W(tm,innerV);seg(p0,pr,'#7c3aed');tag('r',p0,pr,'#7c3aed');}
+  }
+  $('lgG').style.display=method==='disk'?'none':'';
+}
+
+// ---------------- Pasos (tarjetas numeradas) ----------------
+function gcard(parent,num,title,html,tex,fin){
+  const s=document.createElement('div');s.className='gstep'+(fin?' fin':'');
+  const n=document.createElement('div');n.className='gnum';n.textContent=num;
+  const b=document.createElement('div');
+  const t=document.createElement('div');t.className='gt';t.textContent=title;
+  const d=document.createElement('div');d.className='gd';
+  if(html){const p=document.createElement('div');p.innerHTML=html;d.appendChild(p);}
+  if(tex){const e=document.createElement('div');d.appendChild(e);renderTex(e,tex,true);}
+  b.append(t,d);s.append(n,b);parent.appendChild(s);
+  return d;
+}
+
+// ---------------- Motor simbólico (Web Worker) ----------------
+let symWorker=null;
+function killWorker(){ if(symWorker){try{symWorker.terminate();}catch(e){} symWorker=null;} }
+function runSymbolic(plan,ref){
+  return new Promise(resolve=>{
+    killWorker();
+    let w;
+    try{
+      const url=URL.createObjectURL(new Blob([$('wk').textContent],{type:'text/javascript'}));
+      w=new Worker(url);
+    }catch(e){ resolve({ok:false,reason:'lib'}); return; }
+    symWorker=w;
+    const timer=setTimeout(()=>{ if(symWorker===w) killWorker(); resolve({ok:false,reason:'timeout'}); },7000);
+    w.onmessage=ev=>{
+      clearTimeout(timer);
+      if(symWorker===w) killWorker();
+      const r=ev.data;
+      if(r.ok){
+        const val=plan.K*Math.PI*r.num;
+        if(!isFinite(val)||Math.abs(val-ref)>1e-6*Math.max(1,Math.abs(ref))){ resolve({ok:false,reason:'mismatch'}); return; }
+      }
+      resolve(r);
+    };
+    w.onerror=()=>{ clearTimeout(timer); if(symWorker===w) killWorker(); resolve({ok:false,reason:'lib'}); };
+    w.postMessage({I:plan.I,v:plan.v,a:plan.a,b:plan.b});
+  });
+}
+const SYM_MSG={
+  lib:'No se pudo cargar el motor simbólico (revisa tu conexión a internet); se muestra la integración numérica.',
+  noanti:'El motor simbólico no encontró una antiderivada elemental para este integrando; se muestra la integración numérica de alta precisión.',
+  timeout:'El cálculo simbólico tardó demasiado; se muestra la integración numérica de alta precisión.',
+  err:'No se pudo resolver simbólicamente esta integral; se muestra la integración numérica de alta precisión.',
+  mismatch:'El resultado simbólico no coincidió con la integración numérica y se descartó; se muestra la integración numérica.'
+};
+
+// ---------------- Resultados y desarrollo ----------------
+let activePreset=null, symToken=0;
+
+function renderCustomSteps(M){
+  const {cfg}=M,{method,c}=cfg,v=M.vname;
+  const stepsEl=$('steps');stepsEl.innerHTML='';
+  const A=texOf(cfg.aStr),B=texOf(cfg.bStr);
+  const cc=c===0?'':(c>0?'-':'+')+Math.abs(+c.toFixed(6));
+  const Ft=texOf(cfg.F),Gt=texOf(cfg.G&&cfg.G.trim()?cfg.G:'0');
+  const axisTxt=cfg.orient==='H'?'y='+(+c.toFixed(6)):'x='+(+c.toFixed(6));
+  const K=method==='shell'?String.raw`2\pi`:String.raw`\pi`;
+
+  const ctx=document.createElement('div');ctx.className='ctx';
+  ctx.innerHTML='<b>Sólido personalizado · '+methodName(method)+'.</b> Los pasos se generan a partir de las funciones que escribiste.';
+  stepsEl.appendChild(ctx);
+
+  // 1. región
+  const regTxt=method==='disk'
+    ?`La región está entre la curva <b>f</b> y el eje de rotación (<b>${axisTxt}</b>), con ${v} entre a y b.`
+    :method==='washer'
+    ?`La región está entre las curvas <b>f</b> y <b>g</b>, con ${v} entre a y b, y gira alrededor de <b>${axisTxt}</b>.`
+    :`La región está entre <b>f</b> y <b>g</b> (g = 0 si lo dejas vacío), con ${v} entre a y b, y gira alrededor de <b>${axisTxt}</b>.`;
+  gcard(stepsEl,1,'Identifica la región y el eje',regTxt,
+    String.raw`f(${v})=${Ft},\quad ${method!=='disk'?`g(${v})=${Gt},\quad `:''}${A}\le ${v}\le ${B},\quad \text{eje: }${axisTxt}`);
+
+  // 2. elemento representativo
+  let elemTxt,elemTex,setup;
+  const tm=(cfg.a+cfg.b)/2;
+  if(method==='disk'){
+    elemTxt='Cada corte perpendicular al eje es un <b>disco macizo</b> de radio <b>R</b> (distancia de la curva al eje, segmento verde) y espesor <i>d'+v+'</i>.';
+    elemTex=String.raw`R(${v})=\left|${Ft}${cc}\right|,\qquad dV=\pi\,R^2\,d${v}`;
+    setup=String.raw`V=\pi\int_{${A}}^{${B}}\left[${Ft}${cc}\right]^2d${v}`;
+  }else if(method==='washer'){
+    const outerF=Math.abs(M.v1(tm)-c)>=Math.abs(M.v2(tm)-c);
+    const O=outerF?Ft:Gt,I=outerF?Gt:Ft;
+    elemTxt=`Cada corte perpendicular al eje es una <b>arandela</b>: radio exterior <b>R</b> (curva más lejana del eje, en verde) y radio interior <b>r</b> (curva más cercana, en morado). Aquí la curva exterior es <b>${outerF?'f':'g'}</b>.`;
+    elemTex=String.raw`R(${v})=\left|${O}${cc}\right|,\quad r(${v})=\left|${I}${cc}\right|,\qquad dV=\pi\left[R^2-r^2\right]d${v}`;
+    setup=String.raw`V=\pi\int_{${A}}^{${B}}\left[\left(${O}${cc}\right)^2-\left(${I}${cc}\right)^2\right]d${v}`;
+  }else{
+    const rad=c===0?v:String.raw`\left|${v}${cc}\right|`;
+    const hasG=cfg.G&&cfg.G.trim()&&cfg.G.trim()!=='0';
+    const hgt=hasG?String.raw`\left(${Ft}-${Gt}\right)`:String.raw`\left(${Ft}\right)`;
+    elemTxt='Cada franja paralela al eje, de ancho <i>d'+v+'</i>, genera un <b>cascarón cilíndrico</b>: radio <b>ρ</b> (distancia al eje, en verde), altura <b>h</b> (en morado) y espesor <i>d'+v+'</i>. Desenrollado es un rectángulo de largo 2πρ.';
+    elemTex=String.raw`\rho(${v})=${rad},\quad h(${v})=\left|${Ft}${hasG?`-${Gt}`:''}\right|,\qquad dV=2\pi\,\rho\,h\,d${v}`;
+    setup=String.raw`V=2\pi\int_{${A}}^{${B}}${rad}\,${hgt}\,d${v}`;
+  }
+  gcard(stepsEl,2,'Describe el elemento representativo',elemTxt,elemTex);
+  const d3=gcard(stepsEl,3,'Plantea la integral','Sumamos todos los elementos de volumen entre los límites a y b.',setup);
+  if(M.warnings.length){const w=document.createElement('div');w.className='note';w.textContent=M.warnings.join(' ');d3.appendChild(w);}
+
+  // 4. resolver (asíncrono)
+  const d4=gcard(stepsEl,4,'Resuelve la integral','<span class="spin">Calculando el desarrollo analítico…</span>',null,true);
+  const token=++symToken;
+  const plan=symbolicPlan(M);
+  const numTex=String.raw`V\approx ${fmt(M.ref)}\ u^3`;
+  const fallback=msg=>{
+    d4.innerHTML='';
+    const p=document.createElement('div');p.textContent=msg;d4.appendChild(p);
+    const e=document.createElement('div');d4.appendChild(e);renderTex(e,numTex,true);
+  };
+  if(!plan.ok){ fallback(plan.reason); }
+  else if(typeof Worker==='undefined'){ fallback(SYM_MSG.lib); }
+  else runSymbolic(plan,M.ref).then(r=>{
+    if(token!==symToken) return;
+    if(!r.ok){ fallback(SYM_MSG[r.reason]||SYM_MSG.err); return; }
+    d4.innerHTML='';
+    const add=(txt,tex)=>{
+      if(txt){const p=document.createElement('div');p.innerHTML=txt;d4.appendChild(p);}
+      const e=document.createElement('div');d4.appendChild(e);renderTex(e,tex,true);
+    };
+    add('Desarrollamos el integrando:',String.raw`V=${K}\int_{${A}}^{${B}}\left(${r.expTex}\right)d${v}`);
+    add('Una antiderivada es:',String.raw`\int\left(${r.expTex}\right)d${v}=${r.antiTex}+C`);
+    add('Evaluamos en los límites (teorema fundamental del cálculo):',String.raw`V=${K}\left[${r.antiTex}\right]_{${A}}^{${B}}=${K}\left[\left(${r.FbTex}\right)-\left(${r.FaTex}\right)\right]=${K}\left(${r.dTex}\right)`);
+    add('',String.raw`V\approx ${fmt(plan.K*Math.PI*r.num)}\ u^3`);
+  });
+
+  // 5. verificación
+  gcard(stepsEl,5,'Compara con el simulador',`La integración numérica de referencia da V ≈ <b>${fmt(M.ref)}</b> u³ y la suma de las <b>${cfg.n}</b> secciones dibujadas da <b>${fmt(M.midpoint(cfg.n))}</b>. Aumenta <b>n</b> y observa la tabla de convergencia: ambos valores se acercan.`);
+}
+
+function updateResults(M){
+  const {cfg}=M,{method,c,n}=cfg;
+  const approx=M.midpoint(n),ref=M.ref;
+  const P=activePreset;
+  const truth=P?P.exact.val:ref;
+  const abs=Math.abs(approx-truth),rel=truth!==0?abs/Math.abs(truth)*100:0;
+  const rec=!P?recognize(ref):null;
+  let exactRow;
+  if(P) exactRow=`<tr><td>Valor exacto (analítico)</td><td class="num"><span id="exT"></span> ≈ <b>${fmt(P.exact.val)}</b></td></tr>`;
+  else if(rec) exactRow=`<tr><td>Forma cerrada identificada*</td><td class="num"><span id="exT"></span> ≈ <b>${fmt(ref)}</b></td></tr>`;
+  else exactRow=`<tr><td>Valor exacto (analítico)</td><td class="num">ver desarrollo paso a paso</td></tr>`;
+  $('results').innerHTML=`<table>
+    ${exactRow}
+    <tr><td>Integración numérica de referencia (Simpson adaptativo)</td><td class="num">${fmt(ref)}</td></tr>
+    <tr><td>Aproximación del simulador (${n} secciones, punto medio)</td><td class="num"><b>${fmt(approx)}</b></td></tr>
+    <tr><td>Error absoluto</td><td class="num">${abs.toExponential(3)}</td></tr>
+    <tr><td>Error relativo</td><td class="num">${rel.toExponential(3)} %</td></tr></table>
+    ${P?'':'<div class="hint">'+(rec?'* Identificada por comparación numérica con múltiplos racionales de π; verifícala analíticamente. ':'')+'Para funciones personalizadas la referencia es numérica de alta precisión.</div>'}`;
+  if($('exT')) renderTex($('exT'),(P?P.exact.tex:rec.tex)+String.raw`\ u^3`);
+
+  // planteamiento / pasos
+  const stepsEl=$('steps');
+  if(P){
+    symToken++;killWorker();
+    stepsEl.innerHTML='';
+    const d=document.createElement('div');d.className='ctx';d.innerHTML='<b>'+P.prog+'.</b> '+P.ctx;stepsEl.appendChild(d);
+    if(P.guide){
+      P.guide.forEach((s,i)=>gcard(stepsEl,i+1,s.t,s.d,s.tex,s.fin));
+    }else{
+      P.steps.forEach(s=>{const e=document.createElement('div');stepsEl.appendChild(e);renderTex(e,s,true);});
+      if(P.note){const nn=document.createElement('div');nn.className='note';nn.innerHTML='<b>Ventaja del método de cascarones:</b> '+P.note.replace(/^Ventaja sobre arandelas:\s*/,'');stepsEl.appendChild(nn);}
+    }
+  }else{
+    renderCustomSteps(M);
+  }
+  // convergencia
+  const ns=[2,4,8,16,32,64,128,256];
+  let rows=ns.map(nn=>{const ap=M.midpoint(nn),er=Math.abs(ap-truth);return `<tr><td>${nn}</td><td class="num">${fmt(ap)}</td><td class="num">${er.toExponential(3)}</td><td class="num">${(truth?er/Math.abs(truth)*100:0).toExponential(3)} %</td></tr>`;}).join('');
+  $('conv').innerHTML=`<table><tr><th>n</th><th>Aproximación</th><th>Error absoluto</th><th>Error relativo</th></tr>${rows}</table>
+    <div class="hint">El error disminuye al aumentar n: la suma de las secciones converge al valor de la integral.</div>`;
+  $('badge').innerHTML=`${methodName(method)} · eje ${cfg.orient==='H'?'y':'x'} = ${+c.toFixed(4)} · V ≈ ${fmt(approx)} u³`;
+}
+
+// ---------------- Flujo principal ----------------
+function refreshLabels(){
+  const method=document.querySelector('input[name=method]:checked').value;
+  const v=curVar();
+  $('Flabel').textContent=method==='disk'?`f(${v})  — curva que gira`:method==='washer'?`f(${v})  — una curva de la región`:`f(${v})  — curva superior`;
+  $('Glabel').textContent=method==='disk'?`g(${v})  — (no se usa en discos)`:method==='washer'?`g(${v})  — la otra curva (interior/exterior)`:`g(${v})  — curva inferior (vacío = 0)`;
+  $('G').disabled=method==='disk';
+  $('btnSwap').disabled=method==='disk';
+  $('methodHint').textContent=
+    method==='disk'?`Cada sección es un disco: V = π∫[R(${v})]² d${v}, con R = |f − c|. La región queda entre f y el eje de rotación.`:
+    method==='washer'?`Cada sección es una arandela: V = π∫([R]²−[r]²) d${v}. R y r son las distancias de cada curva al eje (si la región cruza el eje, r = 0).`:
+    `Cada sección es un cascarón: V = 2π∫ |${v}−c|·|f−g| d${v}. Variable de integración: ${v}.`;
+}
+function updatePreviews(){
+  const v=curVar(),method=document.querySelector('input[name=method]:checked').value;
+  const F=$('F').value.trim(),G=$('G').value.trim();
+  if(F) renderTex($('pvF'),`f(${v})=${texOf(F)}`); else $('pvF').textContent='';
+  if(G&&method!=='disk') renderTex($('pvG'),`g(${v})=${texOf(G)}`); else $('pvG').textContent='';
+}
+function setErr(msg){$('err').textContent=msg||'';}
+
+function showEmpty(){
+  clearGroup(decor);clearGroup(regionG);clearGroup(solidGroup);clearGroup(sliceGroup);
+  current=null;slices=[];baseMats=[];symToken++;killWorker();
+  setErr('');$('warn').textContent='';
+  $('results').innerHTML='<div class="hint">Aún no hay función. Escribe f para ver el cálculo.</div>';
+  $('conv').innerHTML='';
+  $('badge').textContent='Escribe tus funciones para construir el sólido';
+  $('steps').innerHTML=`<div class="empty"><b>¿Cómo empezar?</b><ol>
+    <li>Elige el <b>método</b> (discos, arandelas o cascarones) y el <b>eje de giro</b> (y = c o x = c).</li>
+    <li>Escribe <b>f</b> (y <b>g</b> si usas arandelas o cascarones) con la sintaxis de calculadora; no hay restricciones de forma.</li>
+    <li>Indica los límites <b>a</b> y <b>b</b>, o usa <b>⌖ Hallar cortes</b> para que el simulador los calcule.</li>
+    <li>Aparecerán la gráfica 2D, el sólido 3D y el desarrollo paso a paso.</li></ol></div>`;
+  draw2D();
+}
+
+function update(fit){
+  updatePreviews();
+  if(!$('F').value.trim()){ showEmpty(); return; }
+  try{
+    const cfg=readCfg();
+    const M=buildModel(cfg);
+    setErr('');
+    $('warn').textContent=M.warnings.join(' ');
+    build3D(M,fit);
+    updateResults(M);
+    draw2D();
+  }catch(e){setErr(e.message);}
+}
+function markCustom(){ if(activePreset){activePreset=null;$('preset').value='custom';markEx(null);} }
+function markEx(id){ document.querySelectorAll('#exbtns button').forEach(b=>b.classList.toggle('on',b.dataset.ex===id)); }
+
+function loadPreset(id){
+  $('roots').innerHTML='';
+  if(id==='custom'){activePreset=null;markEx(null);return;}
+  const P=PRESETS.find(p=>p.id===id);if(!P) return;
+  activePreset=P;
+  $('preset').value=id;markEx(id);
+  document.getElementById('m_'+P.method).checked=true;
+  $('orient').value=P.orient;$('cval').value=P.c;$('F').value=P.F;$('G').value=P.G;$('a').value=P.a;$('b').value=P.b;
+  refreshLabels();
+  update(true);
+}
+function startScratch(){
+  activePreset=null;$('preset').value='custom';markEx(null);
+  $('F').value='';$('G').value='';$('a').value='0';$('b').value='1';$('cval').value='0';$('roots').innerHTML='';
+  refreshLabels();update(true);$('F').focus();
+}
+
+// opciones del selector
+(function(){
+  const sel=$('preset');
+  sel.innerHTML='<option value="custom">Personalizado (mis propias funciones)</option>';
+  const groups={};
+  PRESETS.forEach(p=>{(groups[p.group]=groups[p.group]||[]).push(p);});
+  Object.keys(groups).forEach(gn=>{
+    const og=document.createElement('optgroup');og.label=gn;
+    groups[gn].forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;og.appendChild(o);});
+    sel.appendChild(og);
+  });
+})();
+
+// ---------------- Buscador de cortes ----------------
+function findRoots(){
+  const box=$('roots');box.innerHTML='';
+  try{
+    const method=document.querySelector('input[name=method]:checked').value;
+    if(!$('F').value.trim()) throw new Error('Escribe primero f.');
+    const c=evalConst($('cval').value);
+    const fF=compileFn($('F').value,'f');
+    const fG=method==='disk'?(()=>c):compileFn($('G').value.trim()?$('G').value:'0','g');
+    const rs=scanRoots(t=>fF(t)-fG(t));
+    const what=method==='disk'?'cortes de f con el eje':'cortes f = g';
+    if(!rs.length){box.textContent='No se encontraron '+what+' en [−30, 30].';return;}
+    const lab=document.createElement('span');lab.textContent=what+':';box.appendChild(lab);
+    rs.slice(0,14).forEach(r=>{
+      const b=document.createElement('button');b.className='chip';b.textContent=niceStr(r);b.dataset.v=niceStr(r);b.dataset.n=r;b.title='Clic: lo usa como a o b (el más cercano)';
+      box.appendChild(b);
+    });
+    if(rs.length>=2){
+      // propone la primera región acotada consecutiva (preferentemente la que ya contiene a [a,b])
+      let i=0;
+      try{const a0=evalConst($('a').value),b0=evalConst($('b').value);const j=rs.findIndex((r,k)=>k<rs.length-1&&r<=a0+1e-9&&rs[k+1]>=b0-1e-9);if(j>=0)i=j;}catch(e){}
+      $('a').value=niceStr(rs[i]);$('b').value=niceStr(rs[i+1]);
+      markCustom();update(true);
+    }else{
+      const hint=document.createElement('span');hint.textContent='(solo un corte: elige el otro límite a mano)';box.appendChild(hint);
+    }
+  }catch(e){box.textContent=e.message;}
+}
+$('roots').addEventListener('click',e=>{
+  const b=e.target.closest('button.chip');if(!b) return;
+  let a0=NaN,b0=NaN;try{a0=evalConst($('a').value);b0=evalConst($('b').value);}catch(_){}
+  const r=parseFloat(b.dataset.n);
+  const mid=(isFinite(a0)&&isFinite(b0))?(a0+b0)/2:r;
+  if(r<mid) $('a').value=b.dataset.v; else $('b').value=b.dataset.v;
+  markCustom();update(true);
+});
+
+// ---------------- Eventos ----------------
+let tm=null;
+const debounced=()=>{clearTimeout(tm);tm=setTimeout(()=>{update(false);},250);};
+$('preset').addEventListener('change',e=>loadPreset(e.target.value));
+$('exbtns').addEventListener('click',e=>{const b=e.target.closest('button[data-ex]');if(b) loadPreset(b.dataset.ex);});
+$('btnScratch').addEventListener('click',startScratch);
+document.querySelectorAll('input[name=method]').forEach(r=>r.addEventListener('change',()=>{markCustom();refreshLabels();update(true);}));
+$('orient').addEventListener('change',()=>{markCustom();refreshLabels();update(true);});
+['cval','F','G','a','b'].forEach(id=>$(id).addEventListener('input',()=>{markCustom();debounced();}));
+$('btnGraph').addEventListener('click',()=>update(true));
+$('btnRoots').addEventListener('click',findRoots);
+$('btnSwap').addEventListener('click',()=>{const f=$('F').value;$('F').value=$('G').value;$('G').value=f;markCustom();update(false);});
+$('btnClear').addEventListener('click',startScratch);
+$('n').addEventListener('input',()=>{
+  const n=parseInt($('n').value,10);$('nVal').textContent=n;
+  $('k').max=n;$('k').value=n;anim.on=false;$('btnAnim').textContent='▶ Construir';
+  update(false);
+});
+$('k').addEventListener('input',()=>{anim.on=false;$('btnAnim').textContent='▶ Construir';applyReveal();});
+$('op').addEventListener('input',()=>{const o=parseFloat($('op').value);$('opVal').textContent=o.toFixed(2);if(solidMat)solidMat.opacity=o;});
+['showSolid','showSlices','isolate'].forEach(id=>$(id).addEventListener('change',applyReveal));
+['cut','grid'].forEach(id=>$(id).addEventListener('change',()=>update(false)));
+$('auto').addEventListener('change',()=>{controls.autoRotate=$('auto').checked;controls.autoRotateSpeed=1.5;});
+$('btnReset').addEventListener('click',()=>update(true));
+$('btnAnim').addEventListener('click',()=>{
+  const n=slices.length;if(!n) return;
+  if(anim.on){anim.on=false;$('btnAnim').textContent='▶ Construir';return;}
+  $('showSlices').checked=true;$('isolate').checked=false;
+  anim.kf=(parseInt($('k').value,10)>=n)?0:parseInt($('k').value,10);
+  anim.on=true;$('btnAnim').textContent='⏸ Pausa';
+});
+$('btnPng').addEventListener('click',()=>{
+  renderer.render(scene,camera);
+  const a=document.createElement('a');a.download='solido_de_revolucion.png';a.href=renderer.domElement.toDataURL('image/png');a.click();
+});
+// insertar símbolos / funciones en el campo activo
+let lastIn=$('F');
+['F','G','a','b','cval'].forEach(id=>$(id).addEventListener('focus',e=>{lastIn=e.target;}));
+$('ins').addEventListener('mousedown',e=>e.preventDefault());
+$('ins').addEventListener('click',e=>{
+  const bt=e.target.closest('button[data-t]');if(!bt) return;
+  let el=lastIn;if(el.disabled) el=$('F');
+  const s=el.selectionStart==null?el.value.length:el.selectionStart,en=el.selectionEnd==null?s:el.selectionEnd;
+  const txt=bt.dataset.t;
+  el.value=el.value.slice(0,s)+txt+el.value.slice(en);
+  const pos=s+(bt.dataset.c!==undefined?+bt.dataset.c:txt.length);
+  el.focus();el.setSelectionRange(pos,pos);
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+});
+
+function loop(){
+  requestAnimationFrame(loop);
+  if(anim.on){
+    const n=slices.length;
+    anim.kf+=Math.max(n/240,0.05);
+    if(anim.kf>=n){anim.kf=n;anim.on=false;$('btnAnim').textContent='▶ Construir';}
+    const k=Math.floor(anim.kf);
+    if(k!==parseInt($('k').value,10)){$('k').value=k;applyReveal();}
+  }
+  controls.update();
+  renderer.render(scene,camera);
+}
+
+// inicio
+resize();
+loadPreset('d1');
+loop();
+</script>
+</body>
+</html>
